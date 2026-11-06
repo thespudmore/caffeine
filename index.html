@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Caffeine Energy Tracker</title>
+  <meta name="description" content="A personal log of caffeine in the body, the level the day has come to expect, and the gap between them.">
+  <meta name="theme-color" content="#e7e1d6">
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,480;6..72,560&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <a class="skip" href="#day">Skip to the day</a>
+  <p class="boot" id="boot-note">Loading the tracker… If this stays here, open the site over http. Browsers block it from a folder path.</p>
+  <div class="wrap" id="app" hidden>
+    <header class="top">
+      <div class="brand">
+        <p class="eyebrow">Personal log</p>
+        <h1>Caffeine</h1>
+        <p>Level, habit, and the gap between them.</p>
+      </div>
+      <div class="date-nav">
+        <button type="button" class="icon-button" id="prev-day" aria-label="Previous day"><span aria-hidden="true">←</span></button>
+        <input type="date" id="date-input" aria-label="Choose a date">
+        <button type="button" class="icon-button" id="next-day" aria-label="Next day"><span aria-hidden="true">→</span></button>
+        <button type="button" class="button" id="today-btn">Today</button>
+      </div>
+      <div class="header-actions">
+        <button type="button" class="button" id="settings-open">Settings</button>
+      </div>
+    </header>
+
+    <div class="week" id="week" role="list" aria-label="Week"></div>
+
+    <section id="day" aria-labelledby="day-heading">
+      <p class="day-kicker" id="day-kicker"></p>
+      <h2 id="day-heading"></h2>
+      <div class="panel" style="margin-top: 12px">
+        <div class="chart-host" id="chart-host"></div>
+        <p class="readout" id="readout" aria-live="polite"></p>
+        <ul class="legend">
+          <li><span class="swatch level"></span> Caffeine level</li>
+          <li><span class="swatch baseline"></span> Adapted baseline</li>
+          <li><span class="swatch zero"></span> Fully reset</li>
+          <li><span class="swatch above"></span> Above baseline</li>
+          <li><span class="swatch below"></span> Below baseline</li>
+          <li><span class="swatch taken"></span> Taken dose</li>
+          <li><span class="swatch planned"></span> Planned dose</li>
+        </ul>
+        <label class="history-toggle">
+          <input type="checkbox" id="show-history">
+          Earlier days
+        </label>
+        <p class="note" id="outside-note"></p>
+      </div>
+      <div class="stats" id="summary"></div>
+    </section>
+
+    <section aria-labelledby="doses-heading">
+      <div class="section-head">
+        <h2 id="doses-heading">Doses</h2>
+        <div class="row-actions">
+          <button type="button" class="button" id="copy-previous">Copy previous day</button>
+          <button type="button" class="primary" id="add-dose">Add dose</button>
+        </div>
+      </div>
+      <div id="dose-empty">
+        <p>Nothing logged on this day. A first dose has no baseline yet, so the chart shows only the caffeine itself.</p>
+        <button type="button" class="button" id="load-example">Load example days</button>
+      </div>
+      <ul class="dose-list" id="dose-list"></ul>
+    </section>
+
+    <footer class="site-foot">
+      <p>Saved only in this browser. Nothing is uploaded.</p>
+      <p>This is a heuristic in milligrams, not a measure of how energetic you will feel, and not medical advice. Half-life and tolerance vary from person to person. The 400 mg note is only a common healthy-adult reference.</p>
+    </footer>
+  </div>
+
+  <dialog id="dose-dialog" aria-labelledby="dose-title">
+    <form class="dialog-body stack" id="dose-form">
+      <h2 id="dose-title">Add dose</h2>
+      <p class="error" id="dose-error" role="alert"></p>
+      <label class="field">Time
+        <input type="time" id="dose-time" step="60" required>
+      </label>
+      <label class="field">Amount (mg)
+        <input type="number" id="dose-amount" min="0.1" step="any" inputmode="decimal" required>
+      </label>
+      <label class="field">Drink preset
+        <select id="dose-preset">
+          <option value="">Custom amount</option>
+        </select>
+      </label>
+      <fieldset class="segment" id="multiplier-set">
+        <legend>Size</legend>
+        <label><input type="radio" name="multiplier" value="0.5"> ½</label>
+        <label><input type="radio" name="multiplier" value="1" checked> 1</label>
+        <label><input type="radio" name="multiplier" value="1.5"> 1½</label>
+        <label><input type="radio" name="multiplier" value="2"> 2</label>
+      </fieldset>
+      <label class="field">Label
+        <input type="text" id="dose-label" maxlength="80" placeholder="Optional">
+      </label>
+      <label class="field">Sipped over (minutes)
+        <input type="number" id="dose-duration" min="0" step="5" value="0">
+        <span class="hint">0 means it lands all at once. A longer time splits the drink into five-minute pieces.</span>
+      </label>
+      <fieldset class="segment">
+        <legend>Status</legend>
+        <label><input type="radio" name="status" value="taken" checked> Taken</label>
+        <label><input type="radio" name="status" value="planned"> Planned</label>
+      </fieldset>
+      <p class="hint">Planned doses count in the chart and use a hollow marker, so a future day can be rehearsed.</p>
+      <label class="field">Notes
+        <textarea id="dose-notes" maxlength="240"></textarea>
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="button" id="dose-cancel">Cancel</button>
+        <button type="submit" class="primary" id="dose-save">Save dose</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="settings-dialog" aria-labelledby="settings-title">
+    <form class="dialog-body stack" id="settings-form">
+      <h2 id="settings-title">Settings</h2>
+      <p class="lede">Level is the caffeine still in you. Baseline is what recent days would lead you to expect at the same clock time. The gap is the boost or the lack. Suggested defaults use a 7-day memory. Prototype values match the spreadsheet.</p>
+
+      <fieldset class="stack">
+        <legend class="eyebrow">Elimination</legend>
+        <label class="slider">
+          <span>Half-life <output id="hl-out"></output></span>
+          <input id="hl" type="range" min="2" max="10" step="0.1">
+          <small>4 h matches the spreadsheet. Many people sit nearer 5–6 h.</small>
+        </label>
+        <fieldset class="segment">
+          <legend>Absorption</legend>
+          <label><input type="radio" name="absorption" value="first-order"> First-order, rises to a peak</label>
+          <label><input type="radio" name="absorption" value="instant"> Instant, matches the spreadsheet</label>
+        </fieldset>
+        <label class="slider" id="tmax-field">
+          <span>Time to peak <output id="tmax-out"></output></span>
+          <input id="tmax" type="range" min="0.25" max="2" step="0.05">
+          <small>Used only for first-order absorption.</small>
+        </label>
+        <label class="history-toggle">
+          <input type="checkbox" id="carry">
+          Carry caffeine past midnight
+        </label>
+        <small class="hint">Off restarts each day at zero, which is what the spreadsheet did.</small>
+      </fieldset>
+
+      <fieldset class="stack">
+        <legend class="eyebrow">Baseline</legend>
+        <label class="slider">
+          <span>History window <output id="history-out"></output></span>
+          <input id="history" type="range" min="1" max="21" step="1">
+          <small>How many previous days shape what you expect. Weights are not boosted just because the history is short.</small>
+        </label>
+        <label class="slider">
+          <span>Recency <output id="lambda-out"></output></span>
+          <input id="lambda" type="range" min="0.3" max="1" step="0.05">
+          <small>1.0 treats each day in the window equally. Lower favours yesterday.</small>
+        </label>
+        <label class="slider">
+          <span>Smoothing <output id="sigma-out"></output></span>
+          <input id="sigma" type="range" min="0" max="120" step="5">
+          <small>Lets the baseline rise a little before the usual drink. Zero is the sharpest habit.</small>
+        </label>
+      </fieldset>
+
+      <fieldset class="stack">
+        <legend class="eyebrow">Day</legend>
+        <label class="field">Bedtime
+          <input type="time" id="bedtime" step="60">
+        </label>
+        <div class="split">
+          <label class="field">Window from
+            <select id="window-start"></select>
+          </label>
+          <label class="field">Window to
+            <select id="window-end"></select>
+          </label>
+        </div>
+        <div class="preset-row">
+          <button type="button" class="button" id="window-morning">06:00–24:00</button>
+          <button type="button" class="button" id="window-full">Full 24 hours</button>
+        </div>
+      </fieldset>
+
+      <div class="preset-row">
+        <button type="button" class="button" id="use-defaults">Suggested defaults</button>
+        <button type="button" class="button" id="use-prototype">Prototype values</button>
+      </div>
+
+      <fieldset class="stack">
+        <legend class="eyebrow">Data on this device</legend>
+        <div class="preset-row">
+          <button type="button" class="button" id="export-json">Download backup</button>
+          <button type="button" class="button" id="export-csv">Download CSV</button>
+          <button type="button" class="button" id="import-btn">Import</button>
+          <button type="button" class="button" id="load-example-settings">Load example days</button>
+          <button type="button" class="danger" id="clear-data">Clear doses</button>
+        </div>
+        <input type="file" id="import-file" accept=".json,.csv,application/json,text/csv" hidden>
+        <small class="hint">A JSON backup replaces doses and settings. A CSV adds doses. Columns: date, time, mg, label, status, duration_min, notes.</small>
+      </fieldset>
+
+      <div class="dialog-actions">
+        <button type="button" class="primary" id="settings-close">Close</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" role="status"></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
